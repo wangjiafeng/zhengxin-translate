@@ -1,0 +1,38 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.82353,0.27059,0.32157,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "image-name" : "正心Translate.png",
+          "name" : "正心Translate",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1.18,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.28
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

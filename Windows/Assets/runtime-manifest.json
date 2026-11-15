@@ -1,0 +1,12 @@
+[
+  {
+    "name": "cpu",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10783/llama-b10783-bin-win-cpu-x64.zip",
+    "sha256": "5bc61193ef725db3dc035ea06c759d321d1ddce0c31e1c8b7565e224c125b7c3"
+  },
+  {
+    "name": "vulkan",
+    "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10783/llama-b10783-bin-win-vulkan-x64.zip",
+    "sha256": "3866684361617814e7e49c8905de3c336b3202f02d1a5b7bae4d78618580e2a1"
+  }
+]

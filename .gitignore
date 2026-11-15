@@ -1,0 +1,18 @@
+# Local metadata and generated macOS build output
+.DS_Store
+Build/
+outputs/
+Models/
+
+# Windows build output and packaged installers are attached to GitHub Releases
+Windows/bin/
+Windows/obj/
+Windows/artifacts/
+
+# Excluded project materials
+website/
+软件著作权申请材料/
+tools/build_copyright_docs.py
+tools/revise_copyright_docs.py
+tools/__pycache__/
+
