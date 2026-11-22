@@ -30,9 +30,26 @@ struct MainView: View {
                 .foregroundStyle(mutedInk)
 
                 HStack(spacing: 12) {
-                    Button("验证本地模型") { state.validateModel() }
+                    Button(state.modelActionTitle) { state.validateModel() }
+                        .disabled(state.isModelBusy || state.isRunning)
+                    if state.isModelBusy {
+                        ProgressView().controlSize(.small)
+                            .accessibilityLabel("正在准备模型")
+                    }
                 }
                 .buttonStyle(GoldButtonStyle())
+
+                if case .downloading(let fraction) = state.modelStatus {
+                    ProgressView(value: fraction, total: 1)
+                        .accessibilityLabel("模型下载进度")
+                }
+                if let detail = state.modelDetail {
+                    Text(detail)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.primary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 FormGrid {
                     FormRow(title: "输入文件") {
@@ -132,6 +149,8 @@ struct MainView: View {
     private var modelIcon: String {
         if case .ready = state.modelStatus { return "checkmark.seal.fill" }
         if case .checking = state.modelStatus { return "arrow.triangle.2.circlepath" }
+        if case .connecting = state.modelStatus { return "network" }
+        if case .downloading = state.modelStatus { return "arrow.down.circle" }
         return "exclamationmark.triangle"
     }
 }
@@ -285,7 +304,12 @@ struct SettingsView: View {
         Form {
             LabeledContent("运行架构", value: state.architectureLabel)
             LabeledContent("模型", value: state.modelStatus.label)
-            Button("重新校验模型") { state.validateModel() }
+            if let detail = state.modelDetail {
+                Text(detail).font(.callout).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button(state.modelActionTitle) { state.validateModel() }
+                .disabled(state.isModelBusy || state.isRunning)
         }
         .padding(24).frame(width: 460)
     }

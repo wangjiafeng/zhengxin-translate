@@ -11,6 +11,8 @@ final class AppState: ObservableObject {
     @Published var targetLanguage = LanguageOption.supported[1]
     @Published var outputFormat: OutputFormat = .word
     @Published var outputMode: OutputMode = .translated
+    @Published var modelDownloadedBytes: Int64 = 0
+    @Published var modelTotalBytes: Int64 = ModelDownloadSource.huggingFace.size
     @Published var modelStatus: ModelStatus = .unchecked
     @Published var jobStatus: JobStatus = .idle
     @Published var progress = 0.0
@@ -22,6 +24,7 @@ final class AppState: ObservableObject {
     @Published var reviewItems: [ReviewItem] = []
     @Published var utilitySelection = 0
 
+    private var modelTask: Task<Void, Never>?
     private var jobTask: Task<Void, Never>?
     private var jobControl = JobControl()
 
@@ -88,16 +91,73 @@ final class AppState: ObservableObject {
         }
     }
 
+    var isModelBusy: Bool { modelTask != nil }
+
+    var modelActionTitle: String {
+        if case .downloadFailed = modelStatus { return "重试下载模型" }
+        return "验证本地模型"
+    }
+
+    var modelDetail: String? {
+        switch modelStatus {
+        case .connecting:
+            return "正在建立 HTTPS 连接，20 秒内未收到数据将提示连接超时。"
+        case .downloading:
+            return "已下载 \(ByteCountFormatter.string(fromByteCount: modelDownloadedBytes, countStyle: .decimal)) / \(ByteCountFormatter.string(fromByteCount: modelTotalBytes, countStyle: .decimal))；连续 30 秒无数据将停止并允许重试。"
+        case .downloadFailed(let reason), .invalid(let reason): return reason
+        default: return nil
+        }
+    }
+
     func validateModel() {
+        guard modelTask == nil else { return }
+        modelDownloadedBytes = 0
         modelStatus = .checking
         appendLog("正在校验 TranslateGemma 4B 模型…")
-        Task {
-            let result = await ModelManager.shared.validateInstalledModel()
+        modelTask = Task { [self] in
+            defer { modelTask = nil }
+            var result = await ModelManager.shared.validateInstalledModel()
+            if case .missing = result {
+                modelStatus = .connecting
+                appendLog("未找到模型，正在连接 Hugging Face（MoMonir）；连接成功后将下载约 2.49 GB 模型到用户 Application Support 目录。")
+                do {
+                    try await ModelManager.shared.downloadModel(progress: { _ in }, activity: { [weak self] received, total in
+                        Task { @MainActor in
+                            guard let self, self.isModelBusy else { return }
+                            switch self.modelStatus {
+                            case .connecting:
+                                self.appendLog("已连接下载服务器，开始接收模型数据。")
+                            case .downloading: break
+                            default: return
+                            }
+                            self.modelDownloadedBytes = received
+                            self.modelTotalBytes = total
+                            self.modelStatus = .downloading(min(1, Double(received) / Double(total)))
+                        }
+                    }, verifying: { [weak self] in
+                        Task { @MainActor in
+                            guard let self, self.isModelBusy else { return }
+                            switch self.modelStatus {
+                            case .connecting, .downloading:
+                                self.modelStatus = .checking
+                                self.appendLog("下载完成，正在校验模型文件…")
+                            default: break
+                            }
+                        }
+                    })
+                    modelStatus = .checking
+                    result = await ModelManager.shared.validateInstalledModel()
+                } catch {
+                    modelStatus = .downloadFailed(error.localizedDescription)
+                    appendLog("模型下载失败：\(error.localizedDescription)。请点击“重试下载模型”重新连接。")
+                    return
+                }
+            }
             modelStatus = result
             switch result {
             case .ready(let path, let size):
                 appendLog("模型校验通过：\((Double(size) / 1_000_000_000).formatted(.number.precision(.fractionLength(2)))) GB · \(path)")
-            case .missing: appendLog("未找到模型，请将 GGUF 放入 Models 或应用支持目录。")
+            case .missing: appendLog("未找到模型，请点击“验证本地模型”重试自动下载。")
             case .invalid(let reason): appendLog("模型校验失败：\(reason)")
             default: break
             }

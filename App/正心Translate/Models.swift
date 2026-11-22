@@ -684,6 +684,9 @@ enum JobStatus: Equatable {
 enum ModelStatus: Equatable {
     case unchecked
     case checking
+    case connecting
+    case downloading(Double)
+    case downloadFailed(String)
     case ready(path: String, size: Int64)
     case missing
     case invalid(String)
@@ -692,6 +695,11 @@ enum ModelStatus: Equatable {
         switch self {
         case .unchecked: return "模型：待检查"
         case .checking: return "模型：正在校验"
+        case .connecting: return "模型：正在连接 Hugging Face…"
+        case .downloading(let progress):
+            if progress > 0 && progress < 0.001 { return "模型：正在下载（不足 0.1%）" }
+            return "模型：正在下载 \((progress * 100).formatted(.number.precision(.fractionLength(1))))%"
+        case .downloadFailed: return "模型：下载失败，请重试"
         case .ready: return "模型：已就绪"
         case .missing: return "模型：未安装"
         case .invalid: return "模型：校验失败"
