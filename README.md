@@ -20,7 +20,7 @@
 
 请从本项目的 GitHub **Releases** 页面获取 macOS 或 Windows 安装包。
 
-当前构建使用的模型文件名为 `translategemma-4b-it.Q4_K_M.gguf`。发布包不包含 TranslateGemma 模型，首次使用前需自行取得兼容的 TranslateGemma GGUF 模型，并遵守 [Gemma 使用条款](https://ai.google.dev/gemma/terms)。macOS 客户端按以下顺序查找模型：`ZHENGXIN_MODEL_PATH` 环境变量、用户目录下的 Application Support以及项目的 `Models` 目录。Windows 首次启动会检查程序旁的 `Models` 目录，并可按程序内流程下载模型。
+当前构建使用的模型文件名为 `translategemma-4b-it.Q4_K_M.gguf`。发布包不包含 TranslateGemma 模型，首次使用会自动下载 TranslateGemma GGUF 模型，并遵守 [Gemma 使用条款](https://ai.google.dev/gemma/terms)。macOS 客户端会把模型下载到用户目录下的/Library/Application Support/正心Translate/Models/。Windows 首次启动会检查程序旁的 `Models` 目录，并可按程序内流程下载模型。
 
 ## 从源码构建
 
