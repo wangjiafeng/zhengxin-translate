@@ -1,6 +1,6 @@
 # 正心Translate
 
-正心Translate 是一款在本机运行的文档翻译工具，它由本地 TranslateGemma 模型和 llama.cpp 提供支持，可以进行整本书的翻译。
+正心Translate 是一款在本机运行的文档翻译工具，它由本地 TranslateGemma 模型和 llama.cpp 提供支持，可以进行整本书的翻译，并可以通过命令行和stdio mcp调用。
 
 ## ![正心Translate](正心Translate.png)
 
