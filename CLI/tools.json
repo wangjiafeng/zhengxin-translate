@@ -1,0 +1,122 @@
+[
+  {
+    "name": "translate_text",
+    "description": "翻译短文本；首次调用需加载本地模型，可能耗时较长。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "待翻译文本"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "源语言代码，默认 auto；zh 等同 zh-CN"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "目标语言代码，默认 zh-CN"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "submit_document",
+    "description": "提交本地文档翻译；返回任务 ID，使用 get_job 查询。断开连接将取消未完成任务。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "minLength": 1,
+          "description": "本地输入文件路径：epub/pdf/docx/txt/md"
+        },
+        "output": {
+          "type": "string",
+          "minLength": 1,
+          "description": "输出文件完整路径，不覆盖已有文件"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "md",
+            "docx"
+          ],
+          "description": "输出格式，默认 md"
+        },
+        "bilingual": {
+          "type": "boolean",
+          "description": "双语对照，默认 false"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "源语言代码，默认 auto；zh 等同 zh-CN"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "目标语言代码，默认 zh-CN"
+        }
+      },
+      "required": [
+        "input",
+        "output"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_job",
+    "description": "查询当前 MCP 会话中的任务状态、进度和输出路径。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "任务 ID"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "cancel_job",
+    "description": "取消排队或运行中的文档任务；用 get_job 确认最终状态。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "任务 ID"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_model_status",
+    "description": "检查本地模型校验结果及运行组件，不下载文件。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+]

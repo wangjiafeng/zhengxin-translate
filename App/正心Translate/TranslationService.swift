@@ -1,10 +1,13 @@
 import Foundation
+import Darwin
 
 actor TranslationService {
     static let shared = TranslationService()
 
     func shutdown() async { await runtime.shutdown() }
-    private let runtime = LlamaRuntime()
+    private let runtime: LlamaRuntime
+
+    init(isolated: Bool = false) { runtime = LlamaRuntime(isolated: isolated) }
 
     func translate(
         document: ParsedDocument,
@@ -53,19 +56,27 @@ actor TranslationService {
 
 actor LlamaRuntime {
     private var process: Process?
-    private let port = 18_765
+    private var port = 18_765
+    private let isolated: Bool
+    private let apiKey = UUID().uuidString
+
+    init(isolated: Bool = false) { self.isolated = isolated }
     private var logHandle: FileHandle?
     private var logURL: URL?
 
     func shutdown() {
-        if process?.isRunning == true { process?.terminate() }
+        if let process, process.isRunning {
+            process.terminate()
+            process.waitUntilExit()
+        }
         process = nil
         try? logHandle?.close()
         logHandle = nil
     }
 
     func ensureRunning() async throws {
-        if await isHealthy() { return }
+        if (!isolated || process?.isRunning == true), await isHealthy() { return }
+        if isolated { port = try Self.availablePort() }
         guard let modelURL = await ModelManager.shared.modelURL() else { throw AppError.modelMissing }
         guard let binaryURL = locateBinary() else { throw AppError.runtimeMissing }
 
@@ -87,6 +98,7 @@ actor LlamaRuntime {
             "--no-jinja", "--chat-template", "gemma",
             "-ngl", gpuLayerCount
         ]
+        if isolated { process.arguments! += ["--api-key", apiKey] }
         process.standardOutput = logHandle
         process.standardError = logHandle
         try process.run()
@@ -125,6 +137,7 @@ actor LlamaRuntime {
             "stream": false
         ]
         var request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/v1/chat/completions")!)
+        if isolated { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -193,10 +206,31 @@ actor LlamaRuntime {
     private func isHealthy() async -> Bool {
         guard let url = URL(string: "http://127.0.0.1:\(port)/health") else { return false }
         var request = URLRequest(url: url)
+        if isolated { request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization") }
         request.timeoutInterval = 1
         guard let (_, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse else { return false }
         return (200..<300).contains(http.statusCode)
     }
+
+    private static func availablePort() throws -> Int {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw AppError.serverFailed("无法创建本地套接字") }
+        defer { close(fd) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let result = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
+        }
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        guard result == 0, withUnsafeMutablePointer(to: &address, { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &length) }
+        }) == 0 else { throw AppError.serverFailed("无法分配本地端口") }
+        return Int(UInt16(bigEndian: address.sin_port))
+    }
+
+    func runtimeAvailable() -> Bool { locateBinary() != nil }
 
     private func locateBinary() -> URL? {
         let fm = FileManager.default
@@ -212,6 +246,9 @@ actor LlamaRuntime {
         if let resources = Bundle.main.resourceURL {
             candidates.append(resources.appendingPathComponent("Runtime/\(architecture)/llama-server"))
         }
+        let executable = (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).resolvingSymlinksInPath().deletingLastPathComponent()
+        candidates.append(executable.appendingPathComponent("../Resources/Runtime/\(architecture)/llama-server").standardizedFileURL)
+        candidates.append(executable.appendingPathComponent("Runtime/\(architecture)/llama-server"))
         candidates.append(URL(fileURLWithPath: "/opt/homebrew/bin/llama-server"))
         candidates.append(URL(fileURLWithPath: "/usr/local/bin/llama-server"))
         return candidates.first { fm.isExecutableFile(atPath: $0.path) }

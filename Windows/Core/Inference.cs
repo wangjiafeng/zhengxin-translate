@@ -36,6 +36,12 @@ public sealed class Inference : IAsyncDisposable {
    await Translate("Hello.","en","zh-CN",_=>"English",timeout.Token);
   }catch(OperationCanceledException)when(!ct.IsCancellationRequested){throw new TimeoutException("90秒内未完成模型加载与推理自检。");}
  }
+ // Headless entry: use a prepared installation or an explicit runtime; never install or download.
+ public async Task InitializeLocal(string executable,string model,string root,CancellationToken ct) {
+  if(endpoint!=null)return;
+  try {await Start(executable,model,"cpu",root,ct);Backend="cpu";}
+  catch {await Stop();throw;}
+ }
  public static string Detect(string text)=>text.Any(c=>c>='\u3040'&&c<='\u30ff')?"ja":text.Any(c=>c>='\uac00'&&c<='\ud7af')?"ko":text.Any(c=>c>='\u4e00'&&c<='\u9fff')?"zh-CN":text.Any(c=>c>='\u0400'&&c<='\u04ff')?"ru":"en";
  public static (string,string) Split(string text){var elements=System.Globalization.StringInfo.GetTextElementEnumerator(text);var list=new List<string>();while(elements.MoveNext())list.Add(elements.GetTextElement());if(list.Count<2)throw new InvalidDataException("无法继续拆分超长段落。");int mid=list.Count/2;var choices=Enumerable.Range(Math.Max(1,list.Count/4),Math.Min(list.Count-1,list.Count*3/4)-Math.Max(1,list.Count/4)+1).Where(i=>"。！？；.!?;\n ".Contains(list[i-1],StringComparison.Ordinal));int split=choices.OrderBy(i=>Math.Abs(i-mid)).FirstOrDefault(mid);return(string.Concat(list.Take(split)),string.Concat(list.Skip(split)));}
  public async Task<string> Translate(string text,string source,string target,Func<string,string> english,CancellationToken ct) {

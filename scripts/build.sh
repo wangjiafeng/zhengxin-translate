@@ -19,3 +19,8 @@ APP="$DERIVED_DATA/Build/Products/Debug/正心Translate.app"
 file "$APP/Contents/MacOS/正心Translate"
 echo "Built: $APP"
 
+
+# Bundle the headless CLI alongside the GUI executable.
+ZHENGXIN_CLI_BUNDLE_RUNTIME=0 zsh "$SCRIPT_DIR/build-cli.sh"
+cp "$PROJECT_DIR/Build/CLI/zhengxin-translate" "$APP/Contents/MacOS/"
+cp "$PROJECT_DIR/CLI/tools.json" "$APP/Contents/MacOS/"

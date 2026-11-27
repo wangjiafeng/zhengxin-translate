@@ -2,7 +2,7 @@
 
 ## 关于正心Translate
 
-正心Translate 是一款面向 macOS 的本地整书翻译工具，支持 Apple Silicon 与 Intel 芯片。
+正心Translate 是一款面向 macOS 的本地整书翻译工具，由本地 TranslateGemma 模型和 llama.cpp 提供支持，进行整本书的翻译，并可以通过命令行和stdio mcp调用。
 
 软件使用 SwiftUI 和 AppKit 开发，基于以下组件构建：
 
